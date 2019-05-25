@@ -34,7 +34,7 @@ gs <- .5  # selection on gfl
 results <- list()
 # we create the same 3 plots for different population size. So we first loop through 
 # pop size
-for(n in 3:length(N.vals)){
+for(n in 4:length(N.vals)){
   N <- N.vals[n]
 
   ##### 1st plot #####
