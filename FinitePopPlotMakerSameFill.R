@@ -6,17 +6,17 @@ library(lattice)
 library(viridis)
 library(readr)
 
-Ns <- c(300,800,1500, 4000)
+Ns <- c(300,800,1500, 4000, 5000)
 size <- 10
 # new.res <- list()
-# for(j in 1:12){
-#   if(j <= 9){new.res[[j]] <- one[[j]]}
-#   if(j > 9){new.res[[j]] <- results[[j]]}
+# for(j in 1:15){
+#   if(j <= 12){new.res[[j]] <- one[[j]]}
+#   if(j > 12){new.res[[j]] <- results[[j-3]]}
 # }
 mxx <- -100
 mnn <- 100
-load('FinitePopResults.RData')
-for(j in 1:12){
+load('FinitePopResults_N=300_800_1500_4000_5000.RData')
+for(j in 1:15){
   if(max(results[[j]]) > mxx){mxx <- max(results[[j]])}
   if(min(results[[j]]) < mnn){mnn <- min(results[[j]])}
 }
@@ -25,10 +25,10 @@ for(j in 1:12){
 
 
 #####
-for(i in 1:4){
+for(i in 1:5){
   N <- Ns[i]
-  mx <- mxx - 1/(2 * N)
-  mn <- mnn - 1/(2 * N)
+  mx <- mxx - 1/(2 * 300)
+  mn <- mnn - 1/(2 * 300)
   # this will be the plot of the recombination load
   new.dat <- results #load('FinitePopResults.RData')
   new.dat <-cbind(rep(seq(10^-8, 10^-3, length.out = size), size),
@@ -62,6 +62,7 @@ for(i in 1:4){
   if(i == 2) b <- p
   if(i == 3) c <- p
   if(i == 4) h3 <- p
+  if(i ==5) h6 <- p
   
   new.dat <-cbind(rep(seq(10^-8, 10^-3, length.out = size), size),
                   rep(seq(.75, 1, length.out = size), each = size),
@@ -94,7 +95,7 @@ for(i in 1:4){
   if(i == 2) e <- p
   if(i == 3) f <- p
   if(i == 4) h4 <- p
-  
+  if(i ==5) h7 <- p
   
   new.dat <-cbind(rep(seq(.75, 1, length.out = size), size),
                   rep(seq(.05, .4, length.out = size), each = size),
@@ -127,18 +128,54 @@ for(i in 1:4){
   if(i == 2) h <- p
   if(i == 3) h2 <- p
   if(i == 4) h5 <- p
+  if(i == 5) h8 <- p
 }
 
 a
 b
 c
 h3
+h6
 d
 e
 f
 h4
+h7
 g
 h
 h2
 h5
+h8
+
+grid.arrange(a,
+             d,
+             g,
+             b,
+             e,
+             h,
+             c,
+             f,
+             h2,
+             h3,
+             h4,
+             h5,
+             h6,
+             h7,
+             h8,
+             ncol = 3)
+a
+d
+g
+b
+e
+h
+c
+f
+h2
+h3
+h4
+h5
+h6
+h7
+h8
 #####
