@@ -6,9 +6,9 @@ library(lattice)
 library(viridis)
 library(readr)
 
-Ns <- c(300,800,1500)
+Ns <- c(300,800,1500, 4000, 5000)
 size <- 10
-for(i in 1:3){
+for(i in 1:5){
   N <- Ns[i]
   # this will be the plot of the recombination load
   new.dat <- results #load('FinitePopResults.RData')
@@ -38,6 +38,8 @@ for(i in 1:3){
   if(i == 1) a <- p
   if(i == 2) b <- p
   if(i == 3) c <- p
+  if(i == 4) h3 <- p
+  if(i ==5) h6 <- p
   
   new.dat <-cbind(rep(seq(10^-8, 10^-3, length.out = size), size),
                   rep(seq(.75, 1, length.out = size), each = size),
@@ -65,6 +67,8 @@ for(i in 1:3){
   if(i == 1) d <- p
   if(i == 2) e <- p
   if(i == 3) f <- p
+  if(i == 4) h4 <- p
+  if(i ==5) h7 <- p
   
   
   
@@ -94,14 +98,27 @@ for(i in 1:3){
   if(i == 1) g <- p
   if(i == 2) h <- p
   if(i == 3) h2 <- p
+  if(i == 4) h5 <- p
+  if(i == 5) h8 <- p
 }
 
-a
-b
-c
-d
-e
-f
-g
-h
-h2
+
+
+
+
+grid.arrange(a,
+             d,
+             g,
+             b,
+             e,
+             h,
+             c,
+             f,
+             h2,
+             h3,
+             h4,
+             h5,
+             h6,
+             h7,
+             h8,
+             ncol = 3)
