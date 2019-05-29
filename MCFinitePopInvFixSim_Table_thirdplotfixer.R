@@ -11,7 +11,7 @@ source('finite.pop.generationTable.R')
 size <- 10
 # noise 
 # mu
-N.vals <- c(300, 800, 1500, 5000, 10000)
+N.vals <- c(300, 800, 1500, 4000, 5000, 10000)
 # 10-9
 rates <- seq(10^-8, 10^-2, length.out = size)
 rec.dists <- seq(.05, .4, length.out = size)
@@ -34,7 +34,7 @@ gs <- .5  # selection on gfl
 results <- list()
 # we create the same 3 plots for different population size. So we first loop through 
 # pop size
-for(n in 4:length(N.vals)){
+for(n in 1:length(N.vals)){
   N <- N.vals[n]
 
   # ##### 1st plot #####
@@ -57,21 +57,21 @@ for(n in 4:length(N.vals)){
   #     # if this is the first time the rec table is made we go through and find all
   #     # of the genos without inv and with the FOY recomreducing allele fixed
   #     if(i == 1 && j ==1){
-  #       orig.genos <- c()
-  #       for(y in 1:length(rownames(rectable))){
-  #         geno <- rownames(rectable)[y]
-  #         inv <- nchar(geno) == 12
-  #         dubinv <- nchar(geno) == 13
-  #         # because the char are shifted with the is present in inverted genos
-  #         if(dubinv == T){
-  #           rml <- paste(substr(geno, 6, 6), substr(geno, 12, 12))
-  #         }else{
-  #           rml <- paste(substr(geno, 6, 6), substr(geno, 11, 11))
-  #         }
-  #         if(rml == 'r r' && inv == F && dubinv == F){
-  #           orig.genos <- c(orig.genos, y)
-  #         }
-  #       }
+        orig.genos <- c()
+        for(y in 1:length(rownames(rectable))){
+          geno <- rownames(rectable)[y]
+          inv <- nchar(geno) == 12
+          dubinv <- nchar(geno) == 13
+          # because the char are shifted with the is present in inverted genos
+          if(dubinv == T){
+            rml <- paste(substr(geno, 6, 6), substr(geno, 12, 12))
+          }else{
+            rml <- paste(substr(geno, 6, 6), substr(geno, 11, 11))
+          }
+          if(rml == 'r r' && inv == F && dubinv == F){
+            orig.genos <- c(orig.genos, y)
+          }
+        }
   #     }
   #     # to find the equilibrium population we first draw randomly from the orig genos
   #     # then we run for several hundred generations to allow the pop to reach eq
@@ -298,7 +298,7 @@ for(n in 4:length(N.vals)){
   ##### 3rd plot #####
   # this plot plots inv fix freq against noise in sex determination and the rec
   # distances between loci
-  mut.rate <- 10 ^ -2
+  mut.rate <- rates[5]
   inv.fix.freqs <- array(dim = c(size, size))
   for(i in 1:length(cd.vals)){
     cd <- cd.vals[i]
