@@ -11,7 +11,7 @@ source('finite.pop.generationTable.R')
 size <- 10
 # noise 
 # mu
-N.vals <- c(300, 800, 1500, 5000, 10000)
+N.vals <- c(300, 800, 1500, 4000, 5000, 10000)
 # 10-9
 rates <- seq(10^-8, 10^-2, length.out = size)
 rec.dists <- seq(.05, .4, length.out = size)
@@ -34,7 +34,7 @@ gs <- .5  # selection on gfl
 results <- list()
 # we create the same 3 plots for different population size. So we first loop through 
 # pop size
-for(n in 4:length(N.vals)){
+for(n in 5:length(N.vals)){
   N <- N.vals[n]
 
   ##### 1st plot #####
