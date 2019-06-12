@@ -5,7 +5,8 @@ library(ggplot2)
 library(lattice)
 library(viridis)
 library(readr)
-
+load('FinitePopResults_N=300_800_1500_4000_5000_10000.RData')
+results <- all.dat
 Ns <- c(300,800,1500, 4000, 5000,10000)
 size <- 10
 # new.res <- list()
@@ -42,7 +43,7 @@ for(i in 1:6){
     geom_tile() + 
     # coord_equal() +
     theme(aspect.ratio=1) +
-    geom_contour(color = 'white', alpha = .5) +
+    # geom_contour(color = 'white', alpha = .5) +
     #scale_fill_distiller(palette = 'Spectral', na.value = 'white') +
     theme_bw() +
     labs(fill = 'Inversion \nfix freq -\n neutral \nfix freq', x = 'Mutation Rate', 
@@ -76,7 +77,7 @@ for(i in 1:6){
     geom_tile() + 
     # coord_equal() +
     theme(aspect.ratio=1) +
-    geom_contour(color = 'white', alpha = .5) +
+    # geom_contour(color = 'white', alpha = .5) +
     #scale_fill_distiller(palette = 'Spectral', na.value = 'white') +
     theme_bw() +
     labs(fill = 'Inversion \nfix freq -\n neutral \nfix freq', x = 'Mutation Rate', 
@@ -110,7 +111,7 @@ for(i in 1:6){
     geom_tile() + 
     # coord_equal() +
     theme(aspect.ratio=1) +
-    geom_contour(color = 'white', alpha = .5) +
+    # geom_contour(color = 'white', alpha = .5) +
     #scale_fill_distiller(palette = 'Spectral', na.value = 'white') +
     theme_bw() +
     labs(fill = 'Inversion \nfix freq -\n neutral \nfix freq', x = '% Correct Sex Determination', 
