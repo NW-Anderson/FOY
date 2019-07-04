@@ -298,6 +298,7 @@ for(n in 5:length(N.vals)){
   ##### 3rd plot #####
   # this plot plots inv fix freq against noise in sex determination and the rec
   # distances between loci
+  mut.rate <- rates[5]
   inv.fix.freqs <- array(dim = c(size, size))
   for(i in 1:length(cd.vals)){
     cd <- cd.vals[i]
