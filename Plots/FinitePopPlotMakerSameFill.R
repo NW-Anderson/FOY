@@ -5,9 +5,12 @@ library(ggplot2)
 library(lattice)
 library(viridis)
 library(readr)
-load('FinitePopResults_N=300_800_1500_4000_5000_10000.RData')
-results <- all.dat
-Ns <- c(300,800,1500, 4000, 5000,10000)
+load('AllFiniteResults300to25k.RData')
+results <- list()
+results[1:6] <- all.dat[7:12]
+results[7:12] <- all.dat[16:21]
+# Ns <- c(300,800,1500, 4000, 5000,10000, 25000)
+Ns <- c(1500, 4000, 10000, 250000)
 size <- 10
 # new.res <- list()
 # for(j in 1:15){
@@ -17,7 +20,7 @@ size <- 10
 mxx <- -100
 mnn <- 100
 # load('FinitePopResults_N=300_800_1500_4000_5000.RData')
-for(j in 1:18){
+for(j in 1:12){
   if(max(results[[j]]) > mxx){mxx <- max(results[[j]])}
   if(min(results[[j]]) < mnn){mnn <- min(results[[j]])}
 }
@@ -26,7 +29,7 @@ for(j in 1:18){
 
 
 #####
-for(i in 1:6){
+for(i in 1:4){
   N <- Ns[i]
   mx <- mxx - 1/(2 * 300)
   mn <- mnn - 1/(2 * 300)
@@ -151,6 +154,26 @@ for(i in 1:6){
 # h5
 # h8
 
+# grid.arrange(a,
+#              d,
+#              g,
+#              b,
+#              e,
+#              h,
+#              c,
+#              f,
+#              h2,
+#              h3,
+#              h4,
+#              h5,
+#              h6,
+#              h7,
+#              h8,
+#              h9,
+#              h10,
+#              h11,
+#              ncol = 3)
+
 grid.arrange(a,
              d,
              g,
@@ -163,12 +186,6 @@ grid.arrange(a,
              h3,
              h4,
              h5,
-             h6,
-             h7,
-             h8,
-             h9,
-             h10,
-             h11,
              ncol = 3)
 # a
 # d
