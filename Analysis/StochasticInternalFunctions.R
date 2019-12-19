@@ -1,7 +1,28 @@
+# this function performs an entire generation by calling the functions in the correct 
+# order mutate, fitness, fitness selection, recombine and reproduce
+generation <- function(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95){
+  # we first mutate the gfl on some ind in the pop
+  pop <- mutate(pop, mut.rate, rectable)
+  # calculating fitnesses
+  fits <- c()
+  for(i in 1:length(pop)){
+    fits <- c(fits, fitness(names(pop)[i],h1,h2,h3,s,t,gs))
+  }
+  rm(i)
+  pop <- fitnessSelection(pop, fits)
+  #creating genotype freqs
+  geno.freqs <- pop / sum(pop)
+  
+  haplo.freqs <- ApplyRecTable(geno.freqs, rectable)
+  pop <- Reproduce(rectable, haplo.freqs, sum(pop))
+  return(pop)
+}
+
 # This function takes in a pop and a rate and at the given rate it will turn gfl to g 
 # returns the new pop
 mutate <- function(pop, rate, rectable){
   # creating new population
+  ### i think this is a very convoluted wof of manking a vector of 0
   new.pop <- c(matrix(0, 1, length(pop)))
   names(new.pop) <- names(pop)
   # going through each genotype type
@@ -9,7 +30,6 @@ mutate <- function(pop, rate, rectable){
     # we use twice the rate because there exists two gfl per individual
     # binomial returns how many people of that genotype mutate
     mut.events <- rbinom(1, pop[i], (2 * rate))
-    mut.events <- min(pop[i], mut.events)
     # puts all the individuals who didnt mutate in the new population
     new.pop[i] <- new.pop[i] + pop[i] - mut.events
     # dealing with the mutated individuals
@@ -21,9 +41,6 @@ mutate <- function(pop, rate, rectable){
       if(dubinv == T){
         hap1 <- substr(names(pop)[i], 3, 6)
         hap2 <- substr(names(pop)[i], 9, 12)
-      }else if(inv == T){
-        hap1 <- substr(names(pop)[i], 3, 6)
-        hap2 <- substr(names(pop)[i], 8, 11)
       }else{
         hap1 <- substr(names(pop)[i], 3, 6)
         hap2 <- substr(names(pop)[i], 8, 11)
@@ -55,8 +72,6 @@ mutate <- function(pop, rate, rectable){
   }
   return(new.pop)
 }
-
-
 
 # takes in a single genotype and selection parameters and returns the fitness
 # of the genotype
