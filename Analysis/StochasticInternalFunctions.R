@@ -135,15 +135,15 @@ fitness <- function(geno,h1,h2,h3,s,t,gs){
   # then the fitness effects of the geno vs pheno sex
   if(geno.sex == 'X X'){
     if(pheno.sex == 'S'){
-      fit <- fit * 1 - t
+      fit <- fit * (1 - t)
     }
   }else if(geno.sex == 'X Y' | geno.sex == 'Y X'){
     if(pheno.sex == 'D'){
-      fit <- fit * 1 - t
+      fit <- fit * (1 - t)
     }
   }else if(geno.sex == 'Y Y'){
     if(pheno.sex == 'S'){
-      fit <- fit * 1 - t
+      fit <- fit * (1 - t)
     }else if(pheno.sex == 'D'){
       fit <- fit * (1 - t)^2
     }

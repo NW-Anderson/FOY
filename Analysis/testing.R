@@ -1,3 +1,5 @@
+#### params and population making ####
+
 source('StochasticInternalFunctions.R')
 # dominance factor of Sal
 h1 <- 1   #h1
@@ -20,4 +22,19 @@ for(x in 1:600){
   }else{eq.pop[x] <- 0}
 }
 rm(pop)
+rm(x)
 names(eq.pop) <- rownames(rectable)
+
+#####
+
+new.pop <- generation(pop = eq.pop, mut.rate = rate, h1,h2,h3,s,t,gs,rectable)
+
+    new.pop <- mutate(pop = eq.pop,rate,rectable) # may have fixed a little somehting or just made it more complicated needlessly but 
+    # it chechs out now. left some testing so those may go off if the problem persists
+    
+    # definitely fixed someting to do with length(mut.events)
+    fits <- c()
+    for(i in 1:length(pop)){
+      fits <- c(fits, fitness(geno = names(eq.pop)[i],h1,h2,h3,s,t,gs)) # fixed a parenthesis error with the ts
+    }
+    rm(i)
