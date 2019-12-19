@@ -30,10 +30,12 @@ mutate <- function(pop, rate, rectable){
     # we use twice the rate because there exists two gfl per individual
     # binomial returns how many people of that genotype mutate
     mut.events <- rbinom(1, pop[i], (2 * rate))
+    mut.events <- min(mut.events, pop[i])
     # puts all the individuals who didnt mutate in the new population
     new.pop[i] <- new.pop[i] + pop[i] - mut.events
     # dealing with the mutated individuals
     if(mut.events > 0){
+      for(j in 1:mut.events){
       sex <- substr(names(pop)[i],1,1)
       inv <- nchar(names(pop)[i]) == 12
       dubinv <- nchar(names(pop)[i]) == 13
@@ -45,13 +47,14 @@ mutate <- function(pop, rate, rectable){
         hap1 <- substr(names(pop)[i], 3, 6)
         hap2 <- substr(names(pop)[i], 8, 11)
       }
-      for(j in 1:length(mut.events)){
         # randomly choose which loci will mutate in this individual
         if(runif(1) < .5){
           hap1 <- paste(substr(hap1,1,1),'g',substr(hap1,3,4), sep = '')
         }else{
           hap2 <- paste(substr(hap2,1,1),'g',substr(hap2,3,4), sep = '')
         }
+        hap1save <- hap1
+        hap2save <- hap2
         # putting the genotype back together
         if(inv == T){
           hap2 <- paste(hap2,'i', sep = '')
@@ -63,10 +66,26 @@ mutate <- function(pop, rate, rectable){
         # this flips the order of the haplotypes if they are in the wrong order after 
         # the mutation
         if(is.na(match(new.ind.geno, row.names(rectable)))){
-          new.ind.geno <- paste(sex,hap2,hap1)
+          hap1 <- hap2save
+          hap2 <- hap1save
+          if(inv == T){
+            hap2 <- paste(hap2,'i', sep = '')
+          }else if(dubinv == T){
+            hap1 <- paste(hap1,'i', sep = '')
+            hap2 <- paste(hap2,'i', sep = '')
+          }
+          new.ind.geno <- paste(sex,hap1,hap2)
+        }
+        ### testing
+        if(is.na(match(new.ind.geno,row.names(rectable)))){
+          stop('2')
         }
         # putting  the mutated individual in the new genotype
         new.pop[match(new.ind.geno, names(pop))] <- new.pop[match(new.ind.geno, names(pop))] + 1
+      }
+      ### testing
+      if(sum(new.pop) != sum(pop[1:i])){
+        stop('3')
       }
     }
   }
@@ -134,6 +153,7 @@ fitness <- function(geno,h1,h2,h3,s,t,gs){
 
 # this function takes in a population and a vector of fitnesses and samples from the
 # population with probabilities proportional to thier relative fitness
+### Little questionable if the way the selection is set up is not the culprit
 fitnessSelection <- function(pop,fits){
   # seperating the population into males and females
   males <- c()
