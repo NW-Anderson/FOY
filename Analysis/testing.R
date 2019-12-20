@@ -34,7 +34,14 @@ new.pop <- generation(pop = eq.pop, mut.rate = rate, h1,h2,h3,s,t,gs,rectable)
     
     # definitely fixed someting to do with length(mut.events)
     fits <- c()
-    for(i in 1:length(pop)){
-      fits <- c(fits, fitness(geno = names(eq.pop)[i],h1,h2,h3,s,t,gs)) # fixed a parenthesis error with the ts
+    for(i in 1:length(eq.pop)){
+      fits <- c(fits, fitness(geno = names(new.pop)[i],h1,h2,h3,s,t,gs)) # fixed a parenthesis error with the ts
     }
     rm(i)
+    new.pop <- fitnessSelection(pop = new.pop, fits) # this one actually looks okay maybe comb through again
+    #creating genotype freqs
+    geno.freqs <- new.pop / sum(new.pop)
+    
+    haplo.freqs <- ApplyRecTable(geno.freqs, rectable) # Im still a little wary of my matrix mult but i think this is okay
+    pop <- Reproduce(rectable, haplo.freqs, sum(new.pop))
+    

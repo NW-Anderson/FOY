@@ -330,7 +330,6 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
   rectable <- array(dim = c(length(genotypes),length(haplotypes)))
   rownames(rectable) <- genotypes
   colnames(rectable) <- haplotypes
-  # what recombination values are we using here? r1-9? rec1-3? diff for sexes?
   for(k in 1:nrow(rectable)){ # rows
     for(c in 1:ncol(rectable)){ # columns
       target.hap <- substr(haplotypes[c],3,6)
