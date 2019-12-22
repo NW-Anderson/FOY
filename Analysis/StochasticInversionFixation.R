@@ -1,11 +1,10 @@
 ##### parameters  #####
-library(doSNOW)
-cl<-makeCluster(3)
-on.exit(stopCluster(cl))
+#library(doSNOW)
+#cl<-makeCluster(3)
+#on.exit(stopCluster(cl))
 library(foreach)
-#library(doMC)
-#registerDoMC(4)
-source('SingleGenerationSimulation.R')
+library(doMC)
+registerDoMC(4)
 source('StochasticInternalFunctions.R')
 # these will eventually be varied
 size <- 10
@@ -99,7 +98,7 @@ for(n in 1:3){ #length(N.vals)){
       cat('inserting inversions')
       # inv fix will be the count of how many of the k lead to inv fixing in the pop
       opts <- list(preschedule = FALSE)
-      registerDoSNOW(cl)
+      # registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
         # we begin by sampling a finite population from the equil pop we 
         # found before
@@ -241,7 +240,7 @@ for(n in 1:3){ #length(N.vals)){
       # we then try 1000 times to insert an inv to the pop and see if it fixes
       # or goes extinct
       opts <- list(preschedule = FALSE)
-      registerDoSNOW(cl)
+      # registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
         # first we sample our pop from the eq
         pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
@@ -373,7 +372,7 @@ for(n in 1:3){ #length(N.vals)){
       eq.pop <- eq.pop.save
       # trying 1000 times to fix the inv in the pop
       opts <- list(preschedule = FALSE)
-      registerDoSNOW(cl)
+      # registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
         # sampling our pop from eq 
         pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
