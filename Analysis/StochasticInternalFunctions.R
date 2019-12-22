@@ -353,7 +353,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
             # if both of the haplotypes in the genotype are the same...
             if(hap1 == hap2){
               # and if they match the haplotype of interest
-              if(hap1 == substr(target.hap,1,4)){
+              if(hap1 == target.hap){
                 # the individual is certain to produce a gamete with the haplo of interest
                 val <- 1
                 # otherwise it is impossible
@@ -384,7 +384,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
               # calculation recom dst
               if(sex == 'S'){
                 if(substr(hap1, 4, 4) == 'R'){
-                  if(substr(hap2, 2, 2) == 'R'){
+                  if(substr(hap2, 4, 4) == 'R'){
                     # RR
                     r <- dst
                   }else{
@@ -392,7 +392,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                     r <- dst - dst * dom.fac * red.fac
                   }
                 }else{
-                  if(substr(hap2, 2, 2) == 'R'){
+                  if(substr(hap2, 4, 4) == 'R'){
                     # Rr
                     r <- dst - dst*dom.fac*red.fac
                   }else{
@@ -601,7 +601,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
               # calculation recom dst
               if(sex == 'S'){
                 if(substr(hap1, 4, 4) == 'R'){
-                  if(substr(hap2, 2, 2) == 'R'){
+                  if(substr(hap2, 4, 4) == 'R'){
                     # RR
                     r <- dst
                   }else{
@@ -609,7 +609,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                     r <- dst - dst * dom.fac * red.fac
                   }
                 }else{
-                  if(substr(hap2, 2, 2) == 'R'){
+                  if(substr(hap2, 4, 4) == 'R'){
                     # Rr
                     r <- dst - dst*dom.fac*red.fac
                   }else{
