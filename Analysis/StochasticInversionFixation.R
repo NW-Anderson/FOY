@@ -231,7 +231,7 @@ for(n in 1:3){ #length(N.vals)){
         # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
         for(z in 1:250){
           cat('\014')
-          cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
+          cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
           cat('reaching eq gen:',z)
           eq.pop.save <- generation(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
         }
@@ -364,7 +364,7 @@ for(n in 1:3){ #length(N.vals)){
         # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
         for(z in 1:250){
           cat('\014')
-          cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
+          cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
           cat('reaching eq gen:',z)
           eq.pop.save <- generation(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
         }
