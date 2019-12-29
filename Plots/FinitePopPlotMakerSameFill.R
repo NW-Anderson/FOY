@@ -5,12 +5,9 @@ library(ggplot2)
 library(lattice)
 library(viridis)
 library(readr)
-load('AllFiniteResults300to25k.RData')
-results <- list()
-results[1:6] <- all.dat[7:12]
-results[7:12] <- all.dat[16:21]
+load('new.results.RData')
 # Ns <- c(300,800,1500, 4000, 5000,10000, 25000)
-Ns <- c(1500, 4000, 10000, 250000)
+Ns <- c(500, 1500, 4000)
 size <- 10
 # new.res <- list()
 # for(j in 1:15){
