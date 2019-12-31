@@ -24,6 +24,8 @@ for(x in 1:600){
 rm(pop)
 rm(x)
 names(eq.pop) <- rownames(rectable)
+pop <- eq.pop
+mut.rate <- rate
 
 #####
 

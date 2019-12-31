@@ -30,6 +30,38 @@ generation <- function(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95){
   return(pop)
 }
 
+
+
+generation2.0 <- function(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95){
+  # We begin each generation by introducing mutations on the general 
+  # fitness locus (gfl) on some individuals in the population.
+  pop <- mutate(pop, mut.rate, rectable)
+  # we then calculate the fitness of every idividual taking into account the gfl
+  # the sexually antagonistic locus (sal) and sex
+  fits <- c()
+  for(i in 1:length(pop)){
+    fits <- c(fits, fitness(names(pop)[i],h1,h2,h3,s,t,gs))
+  }
+  rm(i)
+  # changing the population from tracking number of individuals to frequency of each genoytype
+  geno.freqs <- pop / sum(pop)
+  # to simulate the fitness selection we multiply thegenotype frequencies by their fitness
+  for(i in 1:length(geno.freqs)){
+    geno.freqs[i] <- geno.freqs[i] * fits[i]
+  }
+  rm(i)
+  # this next function is where recombination occurs. A certain proportion (corresponding
+  # to the probability of such a recombination event occuring) of each genotype is
+  # recombined into a new genotype
+  haplo.freqs <- ApplyRecTable(geno.freqs, rectable)
+  # this function is where new genotypes of thenext generation are created by randomly
+  # combining genoypes with probabilities equal to their frequency in the parent population
+  # this is another stochastic function
+  pop <- Reproduce(rectable, haplo.freqs, sum(pop))
+  # returning the next geneeration
+  return(pop)
+}
+
 # This function takes in a pop and a mutation rate that will turn gfl to g
 # the deleterious mutation
 # returns the new pop where some individuals have experienced this mutation
@@ -369,8 +401,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                   'YgAri', 
                   'YgaRi',
                   'Ygari')
-  
-  # creating vector of genotypes (rownames)
+  # creating all genotypes (rownames)
   genotypes <- c()
   for(i in 1:24){
     for(j in i:24){
@@ -381,87 +412,103 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
       genotypes <- c(genotypes,paste(haplotypes[i],haplotypes[j]))
     }
   }
+  
   # differentiating between male and female haplotypes
   haplotypes <- c(paste('S', haplotypes), paste('D', haplotypes))
-  
-  ### dont think this is needed anymore but im scared to get rid of it
-  # only dealing with inv on the Y
-  # invgeno <- c()
-  # doubinvgeno <- c()
-  # for(k in 1:length(genotypes)){
-  #   if(substr(genotypes[k], 6, 6) == 'Y'){
-  #     invgeno <- c(invgeno, paste(genotypes[k],'i', sep = ''))
-  #   }
-  #   if(substr(genotypes[k], 6, 6) == 'Y' && substr(genotypes[k], 1, 1) == 'Y'){
-  #     doubinvgeno <- c(doubinvgeno, paste(paste(substr(genotypes[k], 1, 4), 'i',
-  #                                               sep = ''), paste(
-  #                                                 substr(genotypes[k], 6, 9), 'i',
-  #                                                 sep = '')))
-  #   }
-  # }
-  # genotypes <- c(genotypes, invgeno, doubinvgeno)
-  # doubling genotypes and assigning sex
-  
   # differentiating between male and female genotypes
   genotypes <- c(paste("S", genotypes), paste("D", genotypes))
   
-  # this will contain the recombination probs
+  # creating the empty rectable. it will eventually contain in the ijth entry the probability 
+  # genotype i will recombine to produce a haplotype j
   rectable <- array(dim = c(length(genotypes),length(haplotypes)))
   rownames(rectable) <- genotypes
   colnames(rectable) <- haplotypes
+  
+  # now for each entry we calculate the above probability
   for(k in 1:nrow(rectable)){ # rows
     for(c in 1:ncol(rectable)){ # columns
+      # we first describe the target haplotype we are trying to determine the probabiliyt
+      # to recombine to create
       target.hap <- substr(haplotypes[c],3,6)
       target.inv <- nchar(haplotypes[c]) == 7
       target.sex <- substr(haplotypes[c],1,1)
+      # we then do the same for our currrent genotype
       sex <- substr(genotypes[k], 1, 1)
       inv <- nchar(genotypes[k]) == 12
       dubinv <- nchar(genotypes[k]) == 13
-      
       hap1 <- substr(genotypes[k], 3, 6)
       hap2 <- substr(genotypes[k], 8, 11)
       if(dubinv == T){
         hap2 <- substr(genotypes[k], 9, 12)
       }
+      
+      # we then calculate the probability of our current genotype recombining to produce the 
+      # target haplotype
+      # we first look at sex. if the two sexes do not match the probability is zero.
       if(sex == target.sex){
-        # there is no inv in the genotype
+        # we then break into different cases of inversion in the genotype
+        # if there is 0, 1, or 2 inversions
+        # we begin with the case there are 0 inversions
         if(inv == F && dubinv == F){
-          # the target hap is not inverted
+          # We then split into cases of wehter the target haplotype is inverted or not
+          # in this case, if the target haplotype is inverted the possibility of our
+          # genotype with 0 inversions producing it is 0
           if(target.inv == F){
-            # this is the normal case with no inversions.
-            # if both of the haplotypes in the genotype are the same...
+            # we then ask if the two haplotypes within our genotype are equivalent, in
+            # which case any recombination event will yield the same haplotype
             if(hap1 == hap2){
-              # and if they match the haplotype of interest
+              # if the two haplotypes do match then the probability of producing any other
+              # haplotype is 0 and the probability of producing the same haplotype as exists
+              # in the genotype
               if(hap1 == target.hap){
                 # the individual is certain to produce a gamete with the haplo of interest
                 val <- 1
                 # otherwise it is impossible
               }else{val <- 0}
-              # this is the case where interesting things happen with recombination
-              # ie the two haplo of a geno do not match
+              
+            # if the two haplotypes which compose our genotype do not match then they are 
+            # generally able to produce novel haplotypes trhough recombination see below
             }else{
-              # will contain m m1 m2 mm
-              # for match both match the haplo allele, hap1 match hap2 or mismatch 
-              # mismatch is when the haplo of interest contains an allele not present in geno
+              # our goal is to calculate the probability of our genotype to recombining to produce
+              # the target haplotype
+              # we do this by creating a vector where each element is a comparison of the target 
+              # haplotype to the two haplotpes in the genotype
+              # this vector will be of length four and contain m m1 m2 and mm
+              # m is for match where the loci match in all three haplotypes
+              # m1 is for a loci such that the target haplotype and haplotype 1 of the genotype
+              # match but not haplotype 2
+              # m2 is for a loci such that the target haplotype and haplotype 2 of the genotype
+              # match but not haplotype 1
+              # mm is for mismatch when a loci in the target hapltype is not present in the 
+              # genotype
               alvec <- c()
+              # we loop through each of the 4 loci in a haplotype
               for(l in 1:4){
+                # we first check if the target loci matches both loci within the geneotype
                 if(substr(target.hap,l,l) == substr(hap1, l, l) &&
                    substr(target.hap,l,l) == substr(hap2, l, l)){
+                  # add the m for match
                   alvec <- c(alvec, 'm')
-                  # when only the 1st half of the geno has an allele matching the haplo
+                # we then check if the target loci matches the first loci in the genotype
                 }else if(substr(target.hap,l,l) == substr(hap1, l, l)){
                   alvec <- c(alvec, 'm1')
-                  # when 2nd geno has an allele matching the haplo of interst
+                # we then check if the target loci matches the second loci in the genotype
                 }else if(substr(target.hap,l,l) == substr(hap2, l, l)){
                   alvec <- c(alvec, 'm2')
-                  # when neither do
+                # otherwise the target loci is not within the genome at all
                 }else{alvec <- c(alvec, 'mm')}
               }
+              # with this vector of comparisons we are almost ready to cacluate the recombination
+              # probabilities
               
+              # but first we need to calculate the recombination rate between loci
+              # this is a function of the distance between loci, the genotype at the 
+              # recombination modifying loci (rml) and the reduction factor and sex.
               
-              # FROM HERE DOWN IS PRISTINE - HB
-              # calculation recom dst
+              # the reduction in recombination rate due to the rml is only felt in 
+              # males so we begin by breaking into cases based on the sex of our genotype
               if(sex == 'S'){
+                # we then determine the recombination rate based on the genotype
                 if(substr(hap1, 4, 4) == 'R'){
                   if(substr(hap2, 4, 4) == 'R'){
                     # RR
@@ -470,28 +517,44 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                     # Rr
                     r <- dst - dst * dom.fac * red.fac
                   }
-                }else{
+                }else if(substr(hap1, 4, 4) == 'r'){
                   if(substr(hap2, 4, 4) == 'R'){
-                    # Rr
+                    # rR
                     r <- dst - dst*dom.fac*red.fac
                   }else{
                     # rr
                     r <- dst - dst * red.fac
                   }
                 }
+              # in females the genotype does not matter so the recombination rate is 
+                # the distance
               }else if(sex == 'D'){
                 r <- dst
               }
               
-              # beginning to calculate recombination probs
-              # if an allele in the haplo is missing it is impossible to make from geno
+              # Finally we begin to actually calculate recombination probabilities 
+              # if an allele in the target haplotype is missing in the genotype
+              # it is impossible to to for to produce that haplotype through recombination alone
               if('mm' %in% alvec){
                 val <- 0
-                # this is the case where the two halves of the geno share no common alleles
+                
+              # we then break into cases based on how many loci in the two halves of the genotype match
+                # this number of matches determines how many cases we must consider. see below
+                
+              # this first case is when the two halves of the genotype are completely different
+                # and all of the loci are heterogeneous
               }else if(!'m' %in% alvec){
-                # starting at one half to start multiplying rates because only half the geno is
-                # capable of forming the haplo of interest
+                # in this case there is only one possible sequence of recombinations (or not)
+                # that can produce the target haplotype so we only have one case to consider
+                
+                # we calulcate the recombination probabilities in a multiplicative fashion
+                # we initialize this proobability with one half because 
+                ### think more one whther this value should be 1 when not sleepy
                 val <- .5
+                
+                # we begin with the second loci and check if a recombination event needs to 
+                # occur or needs not occur to produce the target haplotype then do the same for
+                # loci 3 and 4
                 for(i in 2:4){
                   # if m1 -> m1 then there cannot be a recom event
                   if(alvec[i] == alvec[i - 1]){
@@ -508,9 +571,15 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                 # if there exists 1 m there are two possible ways to recombine to make
                 # the haplotype of interest
                 vals <- c(.5,.5)
-                # first possible way we will treat the m as an m1
+                # the two different possibilities differ by the way the m is treated
+                # the first possible way we will treat the m as an m1, and use the loci
+                # in the first haplotype in the new haplotype
                 alvec1 <- alvec
                 alvec1[which(alvec %in% 'm')] <- 'm1'
+                
+                # we then determine between which loci a recombination event etiehr must or must not 
+                # occur in order to produce the target haplotype. we do this by comparing each loci
+                # to the one which came before it
                 for(i in 2:4){
                   # if m1 -> m1 then there cannot be a recom event
                   if(alvec1[i] == alvec1[i - 1]){
@@ -523,7 +592,9 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                   }
                 }
                 cat('\n\n')
-                # the second possible way to recombine we will treat the m as m2
+                
+                # the second possible way to recombine to produce the target haplotype
+                # we will treat the m as m2
                 alvec2 <- alvec
                 alvec2[which(alvec %in% 'm')] <- 'm2'
                 for(i in 2:4){
@@ -537,7 +608,10 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                     if(message){cat('r')}
                   }
                 }
+                
+                # we ghen sum the probability the two different possibilitities happen
                 val <- sum(vals)
+                
                 # this is the case where the two halves of the geno have two loci in common
                 # in this case there are 4 possible ways to recobine and produce the haplo
                 # of interest
@@ -546,6 +620,8 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                 alvec1 <- alvec2 <- alvec3 <- alvec4 <- alvec
                 # in the first possibility we treat both m as m1
                 alvec1[which(alvec %in% 'm')] <- 'm1'
+                # we then calculate the sequence of recombination events that will produce the 
+                # target haplotype
                 for(i in 2:4){
                   # if m1 -> m1 then there cannot be a recom event
                   if(alvec1[i] == alvec1[i - 1]){
@@ -602,6 +678,7 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                   }
                 }
                 val <- sum(vals)
+                
                 # this is the case where the two halves of the geno have three loci in common
                 # in this case it does not matter if there is a recom or not, one gamete 
                 # produced will be the haplotype of interest one will not
@@ -611,17 +688,24 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
                 val <- .5
               }else(stop(cat('Error',k,c)))
             }
-            # the target hap is inverted
+            
+          # we then consider the case wheere the target haplotype is inverted and there are 
+            # no inversins in the geotype
           }else if(target.inv == T){
             # this case the geno does not contain an inv but the target hap does
             # impossible
             val <- 0
           }
-          # when one of the haplotypes in the geno is inv. No recom should take place
+        # we then look at the cases where only one of the genotypes hap;otypes is inverted
+          # in this case recombination cannot occur and the only way to produce the 
+          # target haplotype is for it to match one of teh haplotypes in the parent genotype
         }else if(inv == T){
+          # we consider the circumstance when the target haplotype is not inverted but one of 
+          # the chromososmes in the parent genotype is
           if(target.inv == F){
-            # in this case only hap1 can contribute to the target hap because hap2 is inv
-            # if there is only one inv
+            # in this case it is only possible for the target haplotype to be produced by
+            # the first half of the genotype because it will be the portion which is not
+            # inverted 
             if(hap1 == target.hap){
               val <- .5
             }else{
@@ -639,27 +723,38 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
               val <- 0
             }
           }
+        # lastly we consider the case that both halves of the genotype are inverted
         }else if(dubinv == T){
-          # in this case recom will take place in the geno but it will only be able to 
-          # produce the target if the target is also inv
+          # in this case recom will take place in the genotype but it will only be 
+          # able to produce the target hapltype if it is also inverted
           if(target.inv == F){
             val <- 0
           }else{
-            # this is same as the case when there are no inv in how it is handled. there
-            # exists recom and it will produce haplo with inv as well
+            # wehn both halves of the genotype are inverted recombination happens normally
+            # we first consider the case when both halvesof the genotype match
             if(hap1 == hap2){
-              # and if they match the haplotype of interest
+              # in this case the only way to produce the target haplotype is if it matches
+              # both of the haplotypes in the genotype
               if(hap1 == substr(target.hap,1,4)){
                 # the individual is certain to produce a gamete with the haplo of interest
                 val <- 1
                 # otherwise it is impossible
               }else{val <- 0}
-              # this is the case where interesting things happen with recombination
-              # ie the two haplo of a geno do not match
+            # if the two halves of the genotype do not match then fun things can be made by
+              # recombiantion 
             }else{
-              # will contain m m1 m2 mm
-              # for match both match the haplo allele, hap1 match hap2 or mismatch 
-              # mismatch is when the haplo of interest contains an allele not present in geno
+              # our goal is to calculate the probability of our genotype to recombining to produce
+              # the target haplotype
+              # we do this by creating a vector where each element is a comparison of the target 
+              # haplotype to the two haplotpes in the genotype
+              # this vector will be of length four and contain m m1 m2 and mm
+              # m is for match where the loci match in all three haplotypes
+              # m1 is for a loci such that the target haplotype and haplotype 1 of the genotype
+              # match but not haplotype 2
+              # m2 is for a loci such that the target haplotype and haplotype 2 of the genotype
+              # match but not haplotype 1
+              # mm is for mismatch when a loci in the target hapltype is not present in the 
+              # genotype
               alvec <- c()
               for(l in 1:4){
                 if(substr(target.hap,l,l) == substr(hap1, l, l) &&

@@ -33,7 +33,7 @@ gs <- .5  # selection on gfl
 results <- list()
 # we create the same 3 plots for different population size. So we first loop through 
 # pop size
-for(n in 1:3){ #length(N.vals)){
+for(n in 1:5){ #length(N.vals)){
   N <- N.vals[n]
 
   ##### 1st plot #####
@@ -76,7 +76,7 @@ for(n in 1:3){ #length(N.vals)){
         # we use large pop numbers so there is less stochasiticity due to sampling
         eq.pop.save <- c() 
         pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 
-                                     30000, replace = T))))
+                                     40000, replace = T))))
         for(x in 1:600){
           if(!is.na(match(x,names(pop)))){
             eq.pop.save[x] <- pop[match(x,names(pop))]
@@ -85,14 +85,14 @@ for(n in 1:3){ #length(N.vals)){
         rm(pop)
         names(eq.pop.save) <- rownames(rectable)
         # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
-        for(z in 1:250){
+        for(z in 1:500){
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('reaching eq gen:',z)
-          eq.pop.save <- generation(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
+          eq.pop.save <- generation2.0(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
         }
+        eq.pop.n <- sample(names(eq.pop.save), N, replace = T, prob = eq.pop.save) 
       }
-      eq.pop <- eq.pop.save
       cat('\014')
       cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
       cat('inserting inversions')
@@ -100,9 +100,7 @@ for(n in 1:3){ #length(N.vals)){
       opts <- list(preschedule = FALSE)
       # registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
-        # we begin by sampling a finite population from the equil pop we 
-        # found before
-        pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
+        pop <- eq.pop.n
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
         inserted <- F
