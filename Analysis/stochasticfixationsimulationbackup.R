@@ -1,16 +1,15 @@
 ##### parameters  #####
-#library(doSNOW)
-#cl<-makeCluster(3)
-#on.exit(stopCluster(cl))
+library(doSNOW)
+cl<-makeCluster(3)
+on.exit(stopCluster(cl))
 library(foreach)
-library(doMC)
-registerDoMC(4)
-source('StochasticInternalFunctions.R')
-# these will eventually be varied
+#library(doMC)
+#registerDoMC(4)
+
 size <- 10
 # noise 
 # mu
-N.vals <- c(800, 4000, 10000, 25000)
+N.vals <- c(300, 800, 1500, 4000, 5000, 10000, 25000)
 # 10-9
 rates <- seq(10^-8, 10^-2, length.out = size)
 rec.dists <- seq(.05, .4, length.out = size)
@@ -33,9 +32,9 @@ gs <- .5  # selection on gfl
 results <- list()
 # we create the same 3 plots for different population size. So we first loop through 
 # pop size
-for(n in 1:5){ #length(N.vals)){
+for(n in 1:length(N.vals)){
   N <- N.vals[n]
-
+  
   ##### 1st plot #####
   # the first plot is the freq an inversion fixes in the pop plotted against 
   # mutation rate and the recombination distance
@@ -75,8 +74,7 @@ for(n in 1:5){ #length(N.vals)){
         # then we run for several hundred generations to allow the pop to reach eq
         # we use large pop numbers so there is less stochasiticity due to sampling
         eq.pop.save <- c() 
-        pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 
-                                     40000, replace = T))))
+        pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 25000, replace = T))))
         for(x in 1:600){
           if(!is.na(match(x,names(pop)))){
             eq.pop.save[x] <- pop[match(x,names(pop))]
@@ -84,45 +82,37 @@ for(n in 1:5){ #length(N.vals)){
         }
         rm(pop)
         names(eq.pop.save) <- rownames(rectable)
+        
+        
         # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
-        for(z in 1:500){
+        for(z in 1:250){
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('reaching eq gen:',z)
           eq.pop.save <- generation2.0(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
         }
-        eq.pop.n <- sample(names(eq.pop.save), N, replace = T, prob = eq.pop.save) 
       }
-      }
-      # to find the equilibrium population we first draw randomly from the orig genos
-      # then we run for several hundred generations to allow the pop to reach eq
-      # we use large pop numbers so there is less stochasiticity due to sampling
-      eq.pop <- c() 
-      pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 10000, replace = T))))
-      for(x in 1:600){
-        if(!is.na(match(x,names(pop)))){
-          eq.pop[x] <- pop[match(x,names(pop))]
-        }else{eq.pop[x] <- 0}
-      }
-      rm(pop)
-      names(eq.pop) <- rownames(rectable)
-      
+      eq.pop <- eq.pop.save
       
       # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
       for(z in 1:250){
         cat('\014')
         cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
-        eq.pop <- generation(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
       }
       cat('\014')
       cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
       cat('inserting inversions')
       # inv fix will be the count of how many of the k lead to inv fixing in the pop
+      # we begin by sampling a finite population from the equil pop we 
+      # found before
+      pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
       opts <- list(preschedule = FALSE)
-      # registerDoSNOW(cl)
+      registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
-        pop <- eq.pop.n
+        # reording the population so the inversion is inserted on a new individual
+        pop <- sample(pop)
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
         inserted <- F
@@ -158,14 +148,13 @@ for(n in 1:5){ #length(N.vals)){
         # done will turn to true when the inv fixes or dies out
         done <- F
         while(done == F){
-          # doing 1 generation
-          pop <- generation(pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+          # doing 1 generation2.0
+          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
-          
           # we then calculate the inversion freq in the pop
-          # these exist only to find inv freq in each generation
+          # these exist only to find inv freq in each generation2.0
           iv <- 0
           y <- 0
           for(m in 1:length(pop)){
@@ -201,7 +190,7 @@ for(n in 1:5){ #length(N.vals)){
   }
   # saving the resulting matrix in the results list
   results[[3*(n-1)+1]] <- inv.fix.freqs
-  
+  rm(geno,inv,dubinv,rml)
   
   
   
@@ -217,70 +206,27 @@ for(n in 1:5){ #length(N.vals)){
     for(j in 1:length(cd.vals)){
       cd <- cd.vals[j]
       # we first go to eq in a large population 
-<<<<<<< HEAD
-      # if this is the first time the rec table is made we go through and find all
-      # of the genos without inv and with the FOY recomreducing allele fixed
-      if(i == 1 && j ==1){
-        orig.genos <- c()
-        for(y in 1:length(rownames(rectable))){
-          geno <- rownames(rectable)[y]
-          inv <- nchar(geno) == 12
-          dubinv <- nchar(geno) == 13
-          # because the char are shifted with the is present in inverted genos
-          if(dubinv == T){
-            rml <- paste(substr(geno, 6, 6), substr(geno, 12, 12))
-          }else{
-            rml <- paste(substr(geno, 6, 6), substr(geno, 11, 11))
-          }
-          if(rml == 'r r' && inv == F && dubinv == F){
-            orig.genos <- c(orig.genos, y)
-          }
-        }
-        # to find the equilibrium population we first draw randomly from the orig genos
-        # then we run for several hundred generations to allow the pop to reach eq
-        # we use large pop numbers so there is less stochasiticity due to sampling
-        eq.pop.save <- c() 
-        pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 
-                                     30000, replace = T))))
-        for(x in 1:600){
-          if(!is.na(match(x,names(pop)))){
-            eq.pop.save[x] <- pop[match(x,names(pop))]
-          }else{eq.pop.save[x] <- 0}
-        }
-        rm(pop)
-        names(eq.pop.save) <- rownames(rectable)
-        # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
-        for(z in 1:250){
-          cat('\014')
-          cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
-          cat('reaching eq gen:',z)
-          eq.pop.save <- generation(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
-        }
-=======
-      eq.pop <- c() 
-      pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 10000, replace = T))))
-      for(x in 1:600){
-        if(!is.na(match(x,names(pop)))){
-          eq.pop[x] <- pop[match(x,names(pop))]
-        }else{eq.pop[x] <- 0}
-      }
-      rm(pop)
-      names(eq.pop) <- rownames(rectable)
-      
+      eq.pop <- eq.pop.save
+      # we then try 1000 times to insert an inv to the pop and see if it fixes
+      # or goes extinct
       for(z in 1:250){
         cat('\014')
         cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
-        eq.pop <- generation(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
->>>>>>> parent of 86e3934... updated the simulation itself
+        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
       }
-      # we then try 1000 times to insert an inv to the pop and see if it fixes
-      # or goes extinct
+      cat('\014')
+      cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
+      cat('inserting inversions')
+      # inv fix will be the count of how many of the k lead to inv fixing in the pop
+      # we begin by sampling a finite population from the equil pop we 
+      # found before
+      pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
       opts <- list(preschedule = FALSE)
-      # registerDoSNOW(cl)
+      registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
         # first we sample our pop from the eq
-        pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
+        pop <- sample(pop) 
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
         inserted <- F
@@ -316,12 +262,12 @@ for(n in 1:5){ #length(N.vals)){
         done <- F
         # then run to fixation or extinction
         while(done == F){
-          pop <- generation(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
+          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
           cat('\014')
           cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
           
-          # these exist only to find inv freq in each generation
+          # these exist only to find inv freq in each generation2.0
           iv <- 0
           y <- 0
           for(m in 1:length(pop)){
@@ -366,70 +312,28 @@ for(n in 1:5){ #length(N.vals)){
       # creating the rec table for the appropriate rec dist
       rectable <- rectablemaker(rec.dists[j], 1, .5)
       
-      # finding eq pop
-<<<<<<< HEAD
-      # if this is the first time the rec table is made we go through and find all
-      # of the genos without inv and with the FOY recomreducing allele fixed
-      if(i == 1 && j ==1){
-        orig.genos <- c()
-        for(y in 1:length(rownames(rectable))){
-          geno <- rownames(rectable)[y]
-          inv <- nchar(geno) == 12
-          dubinv <- nchar(geno) == 13
-          # because the char are shifted with the is present in inverted genos
-          if(dubinv == T){
-            rml <- paste(substr(geno, 6, 6), substr(geno, 12, 12))
-          }else{
-            rml <- paste(substr(geno, 6, 6), substr(geno, 11, 11))
-          }
-          if(rml == 'r r' && inv == F && dubinv == F){
-            orig.genos <- c(orig.genos, y)
-          }
-        }
-        # to find the equilibrium population we first draw randomly from the orig genos
-        # then we run for several hundred generations to allow the pop to reach eq
-        # we use large pop numbers so there is less stochasiticity due to sampling
-        eq.pop.save <- c() 
-        pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 
-                                     50000, replace = T))))
-        for(x in 1:600){
-          if(!is.na(match(x,names(pop)))){
-            eq.pop.save[x] <- pop[match(x,names(pop))]
-          }else{eq.pop.save[x] <- 0}
-        }
-        rm(pop)
-        names(eq.pop.save) <- rownames(rectable)
-        # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
-        for(z in 1:250){
-          cat('\014')
-          cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
-          cat('reaching eq gen:',z)
-          eq.pop.save <- generation(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
-        }
-=======
-      eq.pop <- c() 
-      pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 10000, replace = T))))
-      for(x in 1:600){
-        if(!is.na(match(x,names(pop)))){
-          eq.pop[x] <- pop[match(x,names(pop))]
-        }else{eq.pop[x] <- 0}
-      }
-      rm(pop)
-      names(eq.pop) <- rownames(rectable)
-      
+      # we first go to eq in a large population 
+      eq.pop <- eq.pop.save
+      # we then try 1000 times to insert an inv to the pop and see if it fixes
+      # or goes extinct
       for(z in 1:250){
         cat('\014')
-        cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
+        cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
-        eq.pop <- generation(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
->>>>>>> parent of 86e3934... updated the simulation itself
+        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
       }
-      # trying 1000 times to fix the inv in the pop
+      cat('\014')
+      cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
+      cat('inserting inversions')
+      # inv fix will be the count of how many of the k lead to inv fixing in the pop
+      # we begin by sampling a finite population from the equil pop we 
+      # found before
+      pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
       opts <- list(preschedule = FALSE)
-      # registerDoSNOW(cl)
+      registerDoSNOW(cl)
       invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
         # sampling our pop from eq 
-        pop <- sample(names(eq.pop), N, replace = T, prob = eq.pop) 
+        pop <- sample(pop)
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
         inserted <- F
@@ -465,12 +369,12 @@ for(n in 1:5){ #length(N.vals)){
         done <- F
         # running until fixation or extinction
         while(done == F){
-          pop <- generation(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
+          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
           cat('\014')
           cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
           
-          # these exist only to find the r freq and inv freq in each generation
+          # these exist only to find the r freq and inv freq in each generation2.0
           iv <- 0
           y <- 0
           for(m in 1:length(pop)){
@@ -502,4 +406,5 @@ for(n in 1:5){ #length(N.vals)){
   }
   results[[3*(n-1)+3]] <- inv.fix.freqs
 }
-  
+
+
