@@ -6,8 +6,7 @@ library(foreach)
 library(doMC)
 registerDoMC(4)
 source('StochasticInternalFunctions.R')
-# these will eventually be varied
-size <- 10
+size <- 3
 # noise 
 # mu
 N.vals <- c(800, 4000, 10000, 25000)
@@ -28,6 +27,7 @@ t <- .3 # reduction due to sex geno mismatch
 gs <- .5  # selection on gfl
 
 ##### parameteers #####
+library(profvis)
 
 # results will be a list of the matrices of inv freqs that we will later plot
 results <- list()
@@ -35,6 +35,7 @@ for(n in 1:4){
   N <- N.vals[n]
   
   ##### 1st plot #####
+  profvis({
   # the first plot is the freq an inversion fixes in the pop plotted against 
   # mutation rate and the recombination distance
   
@@ -85,7 +86,7 @@ for(n in 1:4){
         rm(pop)
         names(eq.pop.save) <- rownames(rectable)
         # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
-        for(z in 1:500){
+        for(z in 1:50){ #0){
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('reaching eq save gen:',z)
@@ -96,7 +97,7 @@ for(n in 1:4){
       # then we run for several hundred generations to allow the pop to reach eq
       # we use large pop numbers so there is less stochasiticity due to sampling
       eq.pop <- eq.pop.save
-      for(z in 1:250){
+      for(z in 1:25){ #0){
         cat('\014')
         cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
@@ -108,7 +109,7 @@ for(n in 1:4){
       # inv fix will be the count of how many of the k lead to inv fixing in the pop
       opts <- list(preschedule = FALSE)
       # registerDoSNOW(cl)
-      invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
+      invfix <- foreach(k = 1:3, .options.multicore=opts, .combine = 'c') %dopar% { #1000, .options.multicore=opts, .combine = 'c') %dopar% {
         pop <- eq.pop
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
@@ -212,6 +213,7 @@ for(n in 1:4){
       inv.fix.freqs[i,j] <- sum(invfix)/1000
     }
   }
+  })
   # saving the resulting matrix in the results list
   results[[3*(n-1)+1]] <- inv.fix.freqs
   ##### 2nd plot ######
