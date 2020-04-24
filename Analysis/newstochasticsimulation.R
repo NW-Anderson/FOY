@@ -35,7 +35,6 @@ for(n in 1:4){
   N <- N.vals[n]
   
   ##### 1st plot #####
-  profvis({
   # the first plot is the freq an inversion fixes in the pop plotted against 
   # mutation rate and the recombination distance
   
@@ -213,7 +212,6 @@ for(n in 1:4){
       inv.fix.freqs[i,j] <- sum(invfix)/1000
     }
   }
-  })
   # saving the resulting matrix in the results list
   results[[3*(n-1)+1]] <- inv.fix.freqs
   ##### 2nd plot ######
