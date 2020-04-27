@@ -27,7 +27,6 @@ t <- .3 # reduction due to sex geno mismatch
 gs <- .5  # selection on gfl
 
 ##### parameteers #####
-library(profvis)
 
 # results will be a list of the matrices of inv freqs that we will later plot
 results <- list()
@@ -89,7 +88,7 @@ for(n in 1:4){
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('reaching eq save gen:',z)
-          eq.pop.save <- generation2.0(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable)
+          eq.pop.save <- generation2.0(eq.pop.save,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95)
         }
       }
       # to find the equilibrium population we first draw randomly from the orig genos
@@ -100,7 +99,7 @@ for(n in 1:4){
         cat('\014')
         cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
-        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95)
       }
       cat('\014')
       cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
@@ -174,7 +173,7 @@ for(n in 1:4){
         done <- F
         while(done == F){
           # each loop is doing one generation
-          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95)
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
@@ -233,7 +232,7 @@ for(n in 1:4){
         cat('\014')
         cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
-        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
       }
       cat('\014')
       cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
@@ -307,7 +306,7 @@ for(n in 1:4){
         done <- F
         while(done == F){
           # each loop is doing one generation
-          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
@@ -350,12 +349,7 @@ for(n in 1:4){
   ##### 3rd plot #####
   # this plot plots inv fix freq against noise in sex determination and the rec
   # distances between loci
-  mut.rate <- rates[5]
-  inv.fix.freqs <- array(dim = c(size, size))
-  ##### 3rd plot #####
-  # this plot plots inv fix freq against noise in sex determination and the rec
-  # distances between loci
-  mut.rate <- rates[5]
+  mut.rate <- rates[2]
   inv.fix.freqs <- array(dim = c(size, size))
   # we first loop through the rows (recombination distance)
   for(i in 1:size){
@@ -372,7 +366,7 @@ for(n in 1:4){
         cat('\014')
         cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
         cat('reaching eq gen:',z)
-        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+        eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
       }
       cat('\014')
       cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
@@ -446,7 +440,7 @@ for(n in 1:4){
         done <- F
         while(done == F){
           # each loop is doing one generation
-          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable)
+          pop <- generation2.0(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
