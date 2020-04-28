@@ -1,39 +1,3 @@
-##### pre making pop tabled #####
-# this function performs an entire generation by calling the functions in the correct 
-# order mutate, fitness, fitness selection, recombine and reproduce
-# it is looped through repeatedly for the forward time simulation
-### this is pretableing i believe
-# generation <- function(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd){
-#   # We begin each generation by introducing mutations on the general 
-#   # fitness locus (gfl) on some individuals in the population.
-#   pop <- mutate(pop, mut.rate, rectable)
-#   # we then calculate the fitness of every idividual taking into account the gfl
-#   # the sexually antagonistic locus (sal) and sex
-#   fits <- c()
-#   for(i in 1:length(pop)){
-#     fits <- c(fits, fitness(names(pop)[i],h1,h2,h3,s,t,gs))
-#   }
-#   rm(i)
-#   # the population then undergoes fitness selection. the fit genotypes may increase
-#   # in number and the unfit may decrease or die off. This function is stochastic 
-#   # and randomly samples individuals according to fitness
-#   pop <- fitnessSelection(pop, fits)
-#   # changing the population from tracking number of individuals to frequency of each genoytype
-#   geno.freqs <- pop / sum(pop)
-#   # this next function is where recombination occurs. A certain proportion (corresponding
-#   # to the probability of such a recombination event occuring) of each genotype is
-#   # recombined into a new genotype
-#   haplo.freqs <- ApplyRecTable(geno.freqs, rectable)
-#   # this function is where new genotypes of thenext generation are created by randomly
-#   # combining genoypes with probabilities equal to their frequency in the parent population
-#   # this is another stochastic function
-#   pop <- Reproduce(rectable, haplo.freqs, sum(pop))
-#   # returning the next geneeration
-#   return(pop)
-# }
-#####
-
-
 
 # for testing:
 # rm(cd.vals,dubinv,eq.pop.save,geno,i,inv,j,n,N.vals,orig.genos,rates,rec.dists,rml,size,x,y)
@@ -52,8 +16,137 @@
 # pop[match(names(peeps), names(pop))] <- peeps
 # rm(peeps)
 
+# calculates the inversion frequency in a population
+CalcInvFreq <- function(pop){
+  iv <- 0
+  y <- 0
+  for(m in 1:length(pop)){
+    inv <- nchar(names(pop)[m]) == 12
+    dubinv <- nchar(names(pop)[m]) == 13
+    if(dubinv == T){
+      geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 9, 9))
+    }else{
+      geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 8, 8))
+    }
+    
+    if(geno.sex == 'Y Y'){ y <- y + 2 * pop[m]}
+    if(geno.sex == 'Y X' | geno.sex == 'X Y'){y <- y + pop[m]}
+    
+    if(inv == T){iv <- iv + pop[m]}
+    if(dubinv == T){iv <- iv + 2 * pop[m]}
+    if(iv > y){stop('wtf', cat(m))}
+  }
+  iv <- unname(iv)
+  y <- unname(y)
+  inv.freq <- iv/y
+  return(inv.freq)
+}
 
+# Inserts an inversion in a random individual 
+InsertInversion <- function(pop){
+  # we first determine which genotypes are capable of having a y chromosome inveted
+  # we do this by asking whether an uninverted y chromosome is present in the genotype
+  insertables <- c()
+  for(l in 1:length(pop)){
+    # breaking apart the genotype into sex, haplotypes and the presence of inversions
+    inv <- nchar(names(pop)[l]) == 12
+    dubinv <- nchar(names(pop)[l]) == 13
+    # because the char are shifted with the is present in inverted genos
+    if(dubinv == T){
+      hap1 <- substr(names(pop)[l], 3, 6)
+      hap2 <- substr(names(pop)[l], 9, 12)
+    }else{
+      hap1 <- substr(names(pop)[l], 3, 6)
+      hap2 <- substr(names(pop)[l], 8, 11)
+    }
+    chrom1 <- substr(hap1,1,1)
+    chrom2 <- substr(hap2,1,1)
+    # we then ask whether either of the chroosomes is a Y
+    if(chrom1 == 'Y' | chrom2 == 'Y'){
+      # and we make sure the genotype is uninverted and that there is an individual
+      # in that genotype to be inverted
+      if(pop[l] > 0 && inv == F && dubinv == F){
+        # if it meets all of these conditions then we can individual can undergo
+        # an inversion
+        insertables <- c(insertables,l)
+      }
+    }
+  }
+  # now that we know which individuals that can undergo the original inversion, we then
+  # randomly determine which individual we will actually invert
+  inverted.individual.number <- sample(insertables,1)
+  # we then determine their genotype, sex, the chromosomes and haployptes
+  to.be.inv.geno <- names(pop[inverted.individual.number])
+  sex <- substr(to.be.inv.geno,1,1)
+  hap1 <- substr(to.be.inv.geno, 3, 6)
+  hap2 <- substr(to.be.inv.geno, 8, 11)
+  chrom1 <- substr(hap1,1,1)
+  chrom2 <- substr(hap2,1,1)
+  # we then insert the inversion on the Y chromosome
+  if(chrom2 == 'Y'){
+    hap2 <- paste(hap2,'i', sep = '')
+  }else if(chrom1 == 'Y' && chrom2 != 'Y'){
+    hap1 <- paste(hap1,'i',sep = '')
+  }
+  # we are putting the inverted genotype back together
+  inverted.geno <- paste(sex, hap1,hap2)
+  # we then take one individual out of the geotype we inverted
+  pop[inverted.individual.number] <- pop[inverted.individual.number] - 1
+  # and add this individual to the inverted genotype
+  pop[match(inverted.geno, names(pop))] <- pop[match(inverted.geno, names(pop))] + 1
+  return(pop)
+}
 
+# samples from a larger population
+SampleEqPop <- function(rectable, eq.pop, N){
+  final.pop <- vector(length = 600)
+  names(final.pop) <- names(eq.pop)
+  pop <- c(unlist(table(sample(1:600, N, replace = T, prob = eq.pop))))
+  for(x in 1:600){
+    if(!is.na(match(x,names(pop)))){
+      final.pop[x] <- pop[match(x,names(pop))]
+    }else{final.pop[x] <- 0}
+  }
+  names(final.pop) <- rownames(rectable)
+  return(final.pop)
+}
+
+# creates a random population from the starting genotypes 
+MakeRandomPop <- function(rectable, orig.genos, N = 30000){
+  final.pop <- vector(length = 600) 
+  pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 
+                               30000, replace = T))))
+  for(x in 1:600){
+    if(!is.na(match(x,names(pop)))){
+      final.pop[x] <- pop[match(x,names(pop))]
+    }else{final.pop[x] <- 0}
+  }
+  rm(pop)
+  names(final.pop) <- rownames(rectable)
+  return(final.pop)
+}
+
+# determines which genotypes we will use in the starting population
+DetermineOrigGenos <- function(rectable){
+  orig.genos <- c()
+  for(y in 1:length(rownames(rectable))){
+    geno <- rownames(rectable)[y]
+    inv <- nchar(geno) == 12
+    dubinv <- nchar(geno) == 13
+    # because the char are shifted with the is present in inverted genos
+    if(dubinv == T){
+      rml <- paste(substr(geno, 6, 6), substr(geno, 12, 12))
+    }else{
+      rml <- paste(substr(geno, 6, 6), substr(geno, 11, 11))
+    }
+    if(rml == 'r r' && inv == F && dubinv == F){
+      orig.genos <- c(orig.genos, y)
+    }
+  }
+  return(orig.genos)
+}
+
+# main generation function
 generation2.0 <- function(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd){
   # We begin each generation by introducing mutations on the general 
   # fitness locus (gfl) on some individuals in the population.
@@ -241,53 +334,6 @@ fitness <- function(geno,h1,h2,h3,s,t,gs){
   return(fit)
 }
 
-# this function takes in a population and the fitnesses of every genotype and 
-# samples from the population with probabilities proportional to thier fitness
-# males and females undergo fitness selection seperately because males compete with 
-# males to mate and females compete with other females
-### Little questionable if the way the selection is set up is not the culprit
-### not used in 2.0
-fitnessSelection <- function(pop,fits){
-  # seperating the population into males and females
-  males <- c()
-  females <- c()
-  male.fits <- c()
-  female.fits <- c()
-  for(i in 1 :length(pop)){
-    sex <- substr(names(pop)[i],1,1)
-    if(sex == 'S'){
-      males <- c(males, pop[i])
-      male.fits <- c(male.fits, fits[i])
-    }else if(sex == 'D'){
-      females <- c(females, pop[i])
-      female.fits <- c(female.fits, fits[i])
-    }
-  }
-  # sample from the males and females seperately with probabilities proportional to fitness
-  # relative to everyone of the same sex
-  new.males <- sample(names(males), sum(males), replace = T, prob = (males * male.fits))
-  new.females <- sample(names(females), sum(females), replace = T, prob = (females * female.fits))
-  # combining males and females into a population
-  new.pop <- c(new.males, new.females)
-  # turning the list of individulas back into a vector contianing how many individuals exist of each 
-  # genotype this vector will not contain any of the genotypes which do not have any individuals present
-  # in this population
-  new.pop <- c(unlist(table(new.pop)))
-  # putting back in the original order and adding the genotypes which have 0 individuals back into the\
-  # vector
-  reordered.pop <- c()
-  for(i in 1:length(pop)){
-    if(!is.na(match(names(pop)[i], names(new.pop)))){
-      reordered.pop[i] <- new.pop[match(names(pop)[i], names(new.pop))]
-    }else{
-      reordered.pop[i] <- 0
-    }
-  }
-  names(reordered.pop) <- names(pop)
-  # returning the new populaiton
-  return(reordered.pop)
-}
-
 # takes in a vector of genotype frequencies and returns a vector of haplotype freq
 # after recombination events have occured at the given rates
 ApplyRecTable <- function(geno.freqs, rectable){
@@ -373,7 +419,7 @@ Reproduce <- function(rectable, haplo.freqs, N, cd){
   # determining the phenotypic sex of each individual
   # it does not necessarily match the genotype
   # if true then the individual will develop as the wrong sex
-  baddev <- runif(10000,0,1)>cd
+  baddev <- runif(N,0,1)>cd
   # first assigning pheno sex that matches geno
   phenosex <- genosex
   # males = true
@@ -953,6 +999,38 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
 }
 
 ##### Backups before I vectorize things #####
+# this function performs an entire generation by calling the functions in the correct 
+# order mutate, fitness, fitness selection, recombine and reproduce
+# it is looped through repeatedly for the forward time simulation
+### this is pretableing i believe
+# generation <- function(pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd){
+#   # We begin each generation by introducing mutations on the general 
+#   # fitness locus (gfl) on some individuals in the population.
+#   pop <- mutate(pop, mut.rate, rectable)
+#   # we then calculate the fitness of every idividual taking into account the gfl
+#   # the sexually antagonistic locus (sal) and sex
+#   fits <- c()
+#   for(i in 1:length(pop)){
+#     fits <- c(fits, fitness(names(pop)[i],h1,h2,h3,s,t,gs))
+#   }
+#   rm(i)
+#   # the population then undergoes fitness selection. the fit genotypes may increase
+#   # in number and the unfit may decrease or die off. This function is stochastic 
+#   # and randomly samples individuals according to fitness
+#   pop <- fitnessSelection(pop, fits)
+#   # changing the population from tracking number of individuals to frequency of each genoytype
+#   geno.freqs <- pop / sum(pop)
+#   # this next function is where recombination occurs. A certain proportion (corresponding
+#   # to the probability of such a recombination event occuring) of each genotype is
+#   # recombined into a new genotype
+#   haplo.freqs <- ApplyRecTable(geno.freqs, rectable)
+#   # this function is where new genotypes of thenext generation are created by randomly
+#   # combining genoypes with probabilities equal to their frequency in the parent population
+#   # this is another stochastic function
+#   pop <- Reproduce(rectable, haplo.freqs, sum(pop))
+#   # returning the next geneeration
+#   return(pop)
+# }
 # OldReproduce <- function(rectable, haplo.freqs, N, cd = .95){
 #   # beginning with a vector of 0s which will be filled with the new generation
 #   pop <- c(matrix(0,1,nrow(rectable)))
@@ -1005,6 +1083,52 @@ rectablemaker <- function(dst, red.fac, dom.fac, message = F){
 #   names(pop) <- rownames(rectable)
 #   # returning the new generation
 #   return(pop)
+# }
+# this function takes in a population and the fitnesses of every genotype and 
+# samples from the population with probabilities proportional to thier fitness
+# males and females undergo fitness selection seperately because males compete with 
+# males to mate and females compete with other females
+### Little questionable if the way the selection is set up is not the culprit
+### not used in 2.0
+# fitnessSelection <- function(pop,fits){
+#   # seperating the population into males and females
+#   males <- c()
+#   females <- c()
+#   male.fits <- c()
+#   female.fits <- c()
+#   for(i in 1 :length(pop)){
+#     sex <- substr(names(pop)[i],1,1)
+#     if(sex == 'S'){
+#       males <- c(males, pop[i])
+#       male.fits <- c(male.fits, fits[i])
+#     }else if(sex == 'D'){
+#       females <- c(females, pop[i])
+#       female.fits <- c(female.fits, fits[i])
+#     }
+#   }
+#   # sample from the males and females seperately with probabilities proportional to fitness
+#   # relative to everyone of the same sex
+#   new.males <- sample(names(males), sum(males), replace = T, prob = (males * male.fits))
+#   new.females <- sample(names(females), sum(females), replace = T, prob = (females * female.fits))
+#   # combining males and females into a population
+#   new.pop <- c(new.males, new.females)
+#   # turning the list of individulas back into a vector contianing how many individuals exist of each 
+#   # genotype this vector will not contain any of the genotypes which do not have any individuals present
+#   # in this population
+#   new.pop <- c(unlist(table(new.pop)))
+#   # putting back in the original order and adding the genotypes which have 0 individuals back into the\
+#   # vector
+#   reordered.pop <- c()
+#   for(i in 1:length(pop)){
+#     if(!is.na(match(names(pop)[i], names(new.pop)))){
+#       reordered.pop[i] <- new.pop[match(names(pop)[i], names(new.pop))]
+#     }else{
+#       reordered.pop[i] <- 0
+#     }
+#   }
+#   names(reordered.pop) <- names(pop)
+#   # returning the new populaiton
+#   return(reordered.pop)
 # }
 
 # ptm <- proc.time()

@@ -4,7 +4,7 @@
 #on.exit(stopCluster(cl))
 library(foreach)
 library(doMC)
-registerDoMC(4)
+registerDoMC(2)
 source('StochasticInternalFunctions.R')
 size <- 3
 # noise 
@@ -33,13 +33,13 @@ results <- list()
 for(n in 1:4){ 
   N <- N.vals[n]
   
-  ##### 1st plot #####
+  ##### INVERSION FIX FREQ ~ MUTATION RATE + RECOMBINATION DISTANCE #####
   # the first plot is the freq an inversion fixes in the pop plotted against 
   # mutation rate and the recombination distance
   
   # inv fix freqs is the matrix containing inv fix freqs. this is the data for the 1st
   # plot for this pop size
-  inv.fix.freqs <- array(dim = c(size, size))
+  inv.fix.freqs <- array(dim = c(size, size,200))
   # we loop through every square on the graph we do every column inside every row so we loop through
   # the rows (rec dist) first
   for(i in 1:size){
@@ -55,35 +55,12 @@ for(n in 1:4){
       # if this is the first time the rec table is made we go through and find all
       # of the genos without inv and with the FOY recomreducing allele fixed
       if(i == 1 && j ==1){
-        orig.genos <- c()
-        for(y in 1:length(rownames(rectable))){
-          geno <- rownames(rectable)[y]
-          inv <- nchar(geno) == 12
-          dubinv <- nchar(geno) == 13
-          # because the char are shifted with the is present in inverted genos
-          if(dubinv == T){
-            rml <- paste(substr(geno, 6, 6), substr(geno, 12, 12))
-          }else{
-            rml <- paste(substr(geno, 6, 6), substr(geno, 11, 11))
-          }
-          if(rml == 'r r' && inv == F && dubinv == F){
-            orig.genos <- c(orig.genos, y)
-          }
-        }
+        orig.genos <- DetermineOrigGenos(rectable)
         # to find the equilibrium population we first draw randomly from the orig genos
         # then we run for several hundred generations to allow the pop to reach eq
         # we use large pop numbers so there is less stochasiticity due to sampling
-        eq.pop.save <- c() 
-        pop <- c(unlist(table(sample(seq(1:length(rownames(rectable)))[orig.genos], 
-                                     30000, replace = T))))
-        for(x in 1:600){
-          if(!is.na(match(x,names(pop)))){
-            eq.pop.save[x] <- pop[match(x,names(pop))]
-          }else{eq.pop.save[x] <- 0}
-        }
-        rm(pop)
-        names(eq.pop.save) <- rownames(rectable)
-        # eq.pop <- sample(rownames(rectable)[orig.genos], 10000, replace = T)
+        eq.pop.save <- MakeRandomPop(rectable, orig.genos, N = 30000)
+        # running the random pop to equilibrium
         for(z in 1:50){ #0){
           cat('\014')
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
@@ -101,66 +78,19 @@ for(n in 1:4){
         cat('reaching eq gen:',z)
         eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd = .95)
       }
+      # before we go and insert inversions we are going to reduce our oppulation down to the correct size 
+      eq.pop <- SampleEqPop(rectable, eq.pop, N)
       cat('\014')
       cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
       cat('inserting inversions')
       # inv fix will be the count of how many of the k lead to inv fixing in the pop
       opts <- list(preschedule = FALSE)
       # registerDoSNOW(cl)
-      invfix <- foreach(k = 1:3, .options.multicore=opts, .combine = 'c') %dopar% { #1000, .options.multicore=opts, .combine = 'c') %dopar% {
+      invfix <- foreach(k = 1:200, .options.multicore=opts, .combine = 'c') %dopar% { #1000, .options.multicore=opts, .combine = 'c') %dopar% {
         pop <- eq.pop
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
-        # we first determine which genotypes are capable of having a y chromosome inveted
-        # we do this by asking whether an uninverted y chromosome is present in the genotype
-        insertables <- c()
-        for(l in 1:length(pop)){
-          # breaking apart the genotype into sex, haplotypes and the presence of inversions
-          inv <- nchar(names(pop)[l]) == 12
-          dubinv <- nchar(names(pop)[l]) == 13
-          # because the char are shifted with the is present in inverted genos
-          if(dubinv == T){
-            hap1 <- substr(names(pop)[l], 3, 6)
-            hap2 <- substr(names(pop)[l], 9, 12)
-          }else{
-            hap1 <- substr(names(pop)[l], 3, 6)
-            hap2 <- substr(names(pop)[l], 8, 11)
-          }
-          chrom1 <- substr(hap1,1,1)
-          chrom2 <- substr(hap2,1,1)
-          # we then ask whether either of the chroosomes is a Y
-          if(chrom1 == 'Y' | chrom2 == 'Y'){
-            # and we make sure the genotype is uninverted and that there is an individual
-            # in that genotype to be inverted
-            if(pop[l] > 0 && inv == F && dubinv == F){
-              # if it meets all of these conditions then we can individual can undergo
-              # an inversion
-              insertables <- c(insertables,l)
-            }
-          }
-        }
-        # now that we know which individuals that can undergo the original inversion, we then
-        # randomly determine which individual we will actually invert
-        inverted.individual.number <- sample(insertables,1)
-        # we then determine their genotype, sex, the chromosomes and haployptes
-        to.be.inv.geno <- names(pop[inverted.individual.number])
-        sex <- substr(to.be.inv.geno,1,1)
-          hap1 <- substr(to.be.inv.geno, 3, 6)
-          hap2 <- substr(to.be.inv.geno, 8, 11)
-        chrom1 <- substr(hap1,1,1)
-        chrom2 <- substr(hap2,1,1)
-        # we then insert the inversion on the Y chromosome
-        if(chrom2 == 'Y'){
-          hap2 <- paste(hap2,'i', sep = '')
-        }else if(chrom1 == 'Y' && chrom2 != 'Y'){
-          hap1 <- paste(hap1,'i',sep = '')
-        }
-        # we are putting the inverted genotype back together
-        inverted.geno <- paste(sex, hap1,hap2)
-        # we then take one individual out of the geotype we inverted
-        pop[inverted.individual.number] <- pop[inverted.individual.number] - 1
-        # and add this individual to the inverted genotype
-        pop[match(inverted.geno, names(pop))] <- pop[match(inverted.geno, names(pop))] + 1
+        pop <- InsertInversion(pop)
         # after we have inserted the inversion our next objective is to simulate forward 
         # in time until the inversion either fixes or dies out in the population
         # we initialize inv.freq to .5 because we exit the while loop when inv.freq
@@ -178,42 +108,27 @@ for(n in 1:4){
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
           # every generation we calculate the inversion freq in the pop
-          iv <- 0
-          y <- 0
-          for(m in 1:length(pop)){
-            inv <- nchar(names(pop)[m]) == 12
-            dubinv <- nchar(names(pop)[m]) == 13
-            if(dubinv == T){
-              geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 9, 9))
-            }else{
-              geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 8, 8))
-            }
-            
-            if(geno.sex == 'Y Y'){ y <- y + 2 * pop[m]}
-            if(geno.sex == 'Y X' | geno.sex == 'X Y'){y <- y + pop[m]}
-            
-            if(inv == T){iv <- iv + pop[m]}
-            if(dubinv == T){iv <- iv + 2 * pop[m]}
-            if(iv > y){stop('wtf', cat(m))}
-            
-          }
+          inv.freq <- CalcInvFreq(pop)
           count <- count + 1
-          inv.freq <- iv/y
           # check if the inv has fixed or died out
-          if(inv.freq == 1 | inv.freq == 0){done <- T}
+          if(inv.freq == 1 | inv.freq == 0 | count > (4 * N)){done <- T}
         }
         cat('\n\n')
         # if the inv fixes in the while loop then we add one to the count of times
         # the inversion fixed
-        if(inv.freq == 1){TRUE}else{F}
+        inv.freq
       }
       # the ijth entry will be the proportion of the 1000 tries that the inv fixed
-      inv.fix.freqs[i,j] <- sum(invfix)/1000
+      inv.fix.freqs[i,j,] <- invfix
     }
   }
   # saving the resulting matrix in the results list
   results[[3*(n-1)+1]] <- inv.fix.freqs
-  ##### 2nd plot ######
+  
+  
+  
+  
+  ##### INVERSION FIX FREQ ~ MUTATION RATE + NOISE IN SEX DETERMINATION ######
   # the second plot plots freq of inv fixation against the mutation rate and the
   # noise in sex determination
   # we begin by creating the rec table for a dist = 1 (it is not varied here)
@@ -234,66 +149,18 @@ for(n in 1:4){
         cat('reaching eq gen:',z)
         eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
       }
+      eq.pop <- SampleEqPop(rectable, eq.pop, N)
       cat('\014')
       cat('n = ', n, 'plot 2', 'i =', i ,'j=', j, '\n')
       cat('inserting inversions')
       # inv fix will be the count of how many of the k lead to inv fixing in the pop
       opts <- list(preschedule = FALSE)
       # registerDoSNOW(cl)
-      invfix <- foreach(k = 1:1000, .options.multicore=opts, .combine = 'c') %dopar% {
+      invfix <- foreach(k = 1:200, .options.multicore=opts, .combine = 'c') %dopar% {
         pop <- eq.pop
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
-        # we first determine which genotypes are capable of having a y chromosome inveted
-        # we do this by asking whether an uninverted y chromosome is present in the genotype
-        insertables <- c()
-        for(l in 1:length(pop)){
-          # breaking apart the genotype into sex, haplotypes and the presence of inversions
-          inv <- nchar(names(pop)[l]) == 12
-          dubinv <- nchar(names(pop)[l]) == 13
-          # because the char are shifted with the is present in inverted genos
-          if(dubinv == T){
-            hap1 <- substr(names(pop)[l], 3, 6)
-            hap2 <- substr(names(pop)[l], 9, 12)
-          }else{
-            hap1 <- substr(names(pop)[l], 3, 6)
-            hap2 <- substr(names(pop)[l], 8, 11)
-          }
-          chrom1 <- substr(hap1,1,1)
-          chrom2 <- substr(hap2,1,1)
-          # we then ask whether either of the chroosomes is a Y
-          if(chrom1 == 'Y' | chrom2 == 'Y'){
-            # and we make sure the genotype is uninverted and that there is an individual
-            # in that genotype to be inverted
-            if(pop[l] > 0 && inv == F && dubinv == F){
-              # if it meets all of these conditions then we can individual can undergo
-              # an inversion
-              insertables <- c(insertables,l)
-            }
-          }
-        }
-        # now that we know which individuals that can undergo the original inversion, we then
-        # randomly determine which individual we will actually invert
-        inverted.individual.number <- sample(insertables,1)
-        # we then determine their genotype, sex, the chromosomes and haployptes
-        to.be.inv.geno <- names(pop[inverted.individual.number])
-        sex <- substr(to.be.inv.geno,1,1)
-        hap1 <- substr(to.be.inv.geno, 3, 6)
-        hap2 <- substr(to.be.inv.geno, 8, 11)
-        chrom1 <- substr(hap1,1,1)
-        chrom2 <- substr(hap2,1,1)
-        # we then insert the inversion on the Y chromosome
-        if(chrom2 == 'Y'){
-          hap2 <- paste(hap2,'i', sep = '')
-        }else if(chrom1 == 'Y' && chrom2 != 'Y'){
-          hap1 <- paste(hap1,'i',sep = '')
-        }
-        # we are putting the inverted genotype back together
-        inverted.geno <- paste(sex, hap1,hap2)
-        # we then take one individual out of the geotype we inverted
-        pop[inverted.individual.number] <- pop[inverted.individual.number] - 1
-        # and add this individual to the inverted genotype
-        pop[match(inverted.geno, names(pop))] <- pop[match(inverted.geno, names(pop))] + 1
+        pop <- InsertInversion(pop)
         # after we have inserted the inversion our next objective is to simulate forward 
         # in time until the inversion either fixes or dies out in the population
         # we initialize inv.freq to .5 because we exit the while loop when inv.freq
@@ -311,42 +178,27 @@ for(n in 1:4){
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
           # every generation we calculate the inversion freq in the pop
-          iv <- 0
-          y <- 0
-          for(m in 1:length(pop)){
-            inv <- nchar(names(pop)[m]) == 12
-            dubinv <- nchar(names(pop)[m]) == 13
-            if(dubinv == T){
-              geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 9, 9))
-            }else{
-              geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 8, 8))
-            }
-            
-            if(geno.sex == 'Y Y'){ y <- y + 2 * pop[m]}
-            if(geno.sex == 'Y X' | geno.sex == 'X Y'){y <- y + pop[m]}
-            
-            if(inv == T){iv <- iv + pop[m]}
-            if(dubinv == T){iv <- iv + 2 * pop[m]}
-            if(iv > y){stop('wtf', cat(m))}
-            
-          }
+          inv.freq <- CalcInvFreq(pop)
           count <- count + 1
-          inv.freq <- iv/y
           # check if the inv has fixed or died out
-          if(inv.freq == 1 | inv.freq == 0){done <- T}
+          if(inv.freq == 1 | inv.freq == 0 | count > (4 * N)){done <- T}
         }
         cat('\n\n')
         # if the inv fixes in the while loop then we add one to the count of times
         # the inversion fixed
-        if(inv.freq == 1){TRUE}else{F}
+        inv.freq
       }
       # the ijth entry will be the proportion of the 1000 tries that the inv fixed
-      inv.fix.freqs[i,j] <- sum(invfix)/1000
+      inv.fix.freqs[i,j,] <- invfix
     }
   }
   # saving the above matrix into the results list
   results[[3*(n-1)+2]] <- inv.fix.freqs
-  ##### 3rd plot #####
+  
+  
+  
+  
+  ##### INVERSION FIX FREQ ~ NOISE IN SEX DETERMINATION + RECOMBINATION DISTANCE #####
   # this plot plots inv fix freq against noise in sex determination and the rec
   # distances between loci
   mut.rate <- rates[2]
@@ -368,6 +220,7 @@ for(n in 1:4){
         cat('reaching eq gen:',z)
         eq.pop <- generation2.0(eq.pop,mut.rate,h1,h2,h3,s,t,gs, rectable, cd)
       }
+      eq.pop <- SampleEqPop(rectable, eq.pop, N)
       cat('\014')
       cat('n = ', n, 'plot 3', 'i =', i ,'j=', j, '\n')
       cat('inserting inversions')
@@ -378,56 +231,7 @@ for(n in 1:4){
         pop <- eq.pop
         # we then go through and insert an inversion on a random y chromosome in 
         # the pop
-        # we first determine which genotypes are capable of having a y chromosome inveted
-        # we do this by asking whether an uninverted y chromosome is present in the genotype
-        insertables <- c()
-        for(l in 1:length(pop)){
-          # breaking apart the genotype into sex, haplotypes and the presence of inversions
-          inv <- nchar(names(pop)[l]) == 12
-          dubinv <- nchar(names(pop)[l]) == 13
-          # because the char are shifted with the is present in inverted genos
-          if(dubinv == T){
-            hap1 <- substr(names(pop)[l], 3, 6)
-            hap2 <- substr(names(pop)[l], 9, 12)
-          }else{
-            hap1 <- substr(names(pop)[l], 3, 6)
-            hap2 <- substr(names(pop)[l], 8, 11)
-          }
-          chrom1 <- substr(hap1,1,1)
-          chrom2 <- substr(hap2,1,1)
-          # we then ask whether either of the chroosomes is a Y
-          if(chrom1 == 'Y' | chrom2 == 'Y'){
-            # and we make sure the genotype is uninverted and that there is an individual
-            # in that genotype to be inverted
-            if(pop[l] > 0 && inv == F && dubinv == F){
-              # if it meets all of these conditions then we can individual can undergo
-              # an inversion
-              insertables <- c(insertables,l)
-            }
-          }
-        }
-        # now that we know which individuals that can undergo the original inversion, we then
-        # randomly determine which individual we will actually invert
-        inverted.individual.number <- sample(insertables,1)
-        # we then determine their genotype, sex, the chromosomes and haployptes
-        to.be.inv.geno <- names(pop[inverted.individual.number])
-        sex <- substr(to.be.inv.geno,1,1)
-        hap1 <- substr(to.be.inv.geno, 3, 6)
-        hap2 <- substr(to.be.inv.geno, 8, 11)
-        chrom1 <- substr(hap1,1,1)
-        chrom2 <- substr(hap2,1,1)
-        # we then insert the inversion on the Y chromosome
-        if(chrom2 == 'Y'){
-          hap2 <- paste(hap2,'i', sep = '')
-        }else if(chrom1 == 'Y' && chrom2 != 'Y'){
-          hap1 <- paste(hap1,'i',sep = '')
-        }
-        # we are putting the inverted genotype back together
-        inverted.geno <- paste(sex, hap1,hap2)
-        # we then take one individual out of the geotype we inverted
-        pop[inverted.individual.number] <- pop[inverted.individual.number] - 1
-        # and add this individual to the inverted genotype
-        pop[match(inverted.geno, names(pop))] <- pop[match(inverted.geno, names(pop))] + 1
+        pop <- InsertInversion(pop)
         # after we have inserted the inversion our next objective is to simulate forward 
         # in time until the inversion either fixes or dies out in the population
         # we initialize inv.freq to .5 because we exit the while loop when inv.freq
@@ -445,35 +249,17 @@ for(n in 1:4){
           cat('n = ', n, 'plot 1', 'i =', i ,'j=', j, '\n')
           cat('k = ', k, 'gen' = count)
           # every generation we calculate the inversion freq in the pop
-          iv <- 0
-          y <- 0
-          for(m in 1:length(pop)){
-            inv <- nchar(names(pop)[m]) == 12
-            dubinv <- nchar(names(pop)[m]) == 13
-            if(dubinv == T){
-              geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 9, 9))
-            }else{
-              geno.sex <- paste(substr(names(pop)[m], 3, 3), substr(names(pop)[m], 8, 8))
-            }
-            
-            if(geno.sex == 'Y Y'){ y <- y + 2 * pop[m]}
-            if(geno.sex == 'Y X' | geno.sex == 'X Y'){y <- y + pop[m]}
-            
-            if(inv == T){iv <- iv + pop[m]}
-            if(dubinv == T){iv <- iv + 2 * pop[m]}
-            if(iv > y){stop('wtf', cat(m))}
-            
-          }
+          inv.freq <- CalcInvFreq(pop)
           count <- count + 1
-          inv.freq <- iv/y
           # check if the inv has fixed or died out
-          if(inv.freq == 1 | inv.freq == 0){done <- T}
+          if(inv.freq == 1 | inv.freq == 0 | count > (4 * N)){done <- T}
         }
         cat('\n\n')
         # if the inv fixes in the while loop then we add one to the count of times
         # the inversion fixed
-        if(inv.freq == 1){TRUE}else{F}
+        inv.freq
       }
+      inv.fix.freqs[i,j,] <- invfix
     }
   }
   # saving the above matrix into the results list
